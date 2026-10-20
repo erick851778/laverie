@@ -49,6 +49,11 @@
   .add{padding:10px 12px 12px;background:var(--head)}
   .add .info{font-size:.8rem;color:var(--muted);margin-bottom:8px}
   .add .info b.ok{color:var(--free-ink)} .add .info b.no{color:var(--full-ink)}
+  .pin-row{margin-bottom:10px}
+  .pin-row label{display:block;font-size:.8rem;font-weight:600;margin-bottom:4px}
+  .pin-row small{display:block;color:var(--muted);font-size:.74rem;margin-top:4px;line-height:1.3}
+  .pin-row input{width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:8px;font-size:1rem;
+    letter-spacing:6px;background:var(--card);color:var(--ink);font-family:inherit;-webkit-text-security:disc;text-security:disc}
   .add button{width:100%;padding:12px;border:0;border-radius:10px;background:var(--accent);color:#fff;
     font-size:1rem;font-weight:600;cursor:pointer;font-family:inherit}
   .err{color:var(--full-ink);font-size:.82rem;min-height:1.1em;margin:0 0 6px}
@@ -137,13 +142,18 @@ function googleTranslateElementInit() {
     </table>
     <div class="add">
       <div class="info" id="info"></div>
+      <div class="pin-row">
+        <label for="fPin">Code secret (4 chiffres) *</label>
+        <input id="fPin" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off" placeholder="••••">
+        <small>Choisis un code que toi seul(e) connais. Il n'est pas affiché dans le tableau. Il te servira à retirer ta réservation depuis un autre appareil.</small>
+      </div>
       <div class="err" id="err"></div>
       <button type="button" id="addBtn">Ajouter au planning</button>
     </div>
   </div>
 
   <div class="rules">
-    <b>Règles :</b> 2 machines max par personne par jour. Pour annuler, appuyez sur ✕.
+    <b>Règles :</b> 2 machines max par personne par jour. Pour annuler, appuyez sur ✕ (sur un autre appareil, il faut ton code secret).
   </div>
 </main>
 
@@ -181,6 +191,20 @@ function deviceId(){
   }catch{ return "anon"; }
 }
 const ME = deviceId();
+
+/* ---------- code secret : on enregistre une empreinte (hash), jamais le code en clair ---------- */
+async function hashPin(pin, salt){
+  const text = `${salt}:${pin}`;
+  try{
+    if (crypto.subtle){
+      const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
+      return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, "0")).join("");
+    }
+  }catch{}
+  let h = 5381;
+  for (const c of text) h = ((h << 5) + h + c.charCodeAt(0)) | 0;
+  return "f" + h;
+}
 
 const usedW = entries => entries.reduce((s, e) => s + e.washers, 0);
 const usedD = entries => entries.reduce((s, e) => s + e.dryers, 0);
@@ -319,9 +343,17 @@ $("rows").addEventListener("click", async ev => {
   const entry = (slots[h] || []).find(e => e.id === btn.dataset.id);
   if (!entry) return;
   if (entry.owner !== ME){
-    const typed = prompt(`Pour retirer ${entry.name} de la liste, entre le numéro de chambre :`);
-    if (typed === null) return;
-    if (cleanRoom(typed) !== String(entry.room)) return alert("Ce n'est pas le bon numéro de chambre.");
+    if (entry.pinHash){
+      // autre appareil : il faut le code secret choisi à l'inscription
+      const typed = prompt(`Pour retirer ${entry.name} de la liste, entre son code secret (4 chiffres) :`);
+      if (typed === null) return;
+      if ((await hashPin(typed.trim(), entry.id)) !== entry.pinHash) return alert("Code secret incorrect.");
+    } else {
+      // anciennes réservations sans code : on demande le numéro de chambre
+      const typed = prompt(`Pour retirer ${entry.name} de la liste, entre le numéro de chambre :`);
+      if (typed === null) return;
+      if (cleanRoom(typed) !== String(entry.room)) return alert("Ce n'est pas le bon numéro de chambre.");
+    }
   } else if (!confirm("Retirer ta réservation ?")) return;
   await store.cancel(selected, h, entry.id);
 });
@@ -355,21 +387,29 @@ function refreshCounts(){
 }
 $("fH").addEventListener("change", refreshCounts);
 
+// n'accepte que des chiffres dans le champ du code
+$("fPin").addEventListener("input", e => { e.target.value = e.target.value.replace(/\D/g, "").slice(0, 4); });
+
 $("addBtn").addEventListener("click", async () => {
   const err = m => { $("err").textContent = m; };
   err("");
   const name = $("fName").value.trim().slice(0, 30), room = cleanRoom($("fRoom").value);
   const h = +$("fH").value, w = +$("fW").value, d = +$("fD").value;
+  const pin = $("fPin").value.trim();
   if (!name) return err("Écris ton nom.");
   if (!validRoom(room)) return err("Entre un numéro de chambre valide.");
   if (!h) return err("Choisis une heure.");
   if (w + d === 0) return err("Choisis au moins une option.");
+  if (!/^\d{4}$/.test(pin)) return err("Choisis un code secret de 4 chiffres.");
   let already = 0;
   for (const list of Object.values(slots)) already += list.filter(e => String(e.room) === room && norm(e.name) === norm(name)).length;
   if (already >= MAX_SLOTS_PER_PERSON_PER_DAY) return err(`${name} a déjà réservé ${MAX_SLOTS_PER_PERSON_PER_DAY} créneaux ce jour-là.`);
   try{
-    await store.book(selected, h, { id: crypto.randomUUID(), room, name, washers: w, dryers: d, owner: ME, createdAt: Date.now() });
+    const id = crypto.randomUUID();
+    const pinHash = await hashPin(pin, id);
+    await store.book(selected, h, { id, room, name, washers: w, dryers: d, owner: ME, pinHash, createdAt: Date.now() });
     try{ localStorage.setItem("doc_room", room); localStorage.setItem("doc_name", name); }catch{}
+    $("fPin").value = "";
   }catch(ex){
     err(ex.message === "full" ? "Créneau complet." : "Erreur, réessaie.");
   }
