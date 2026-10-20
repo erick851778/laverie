@@ -1,0 +1,393 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Laverie du dortoir</title>
+<style>
+  :root{
+    --bg:#f4f6fb; --card:#fff; --ink:#1d2433; --muted:#6b7488; --line:#e3e7f0;
+    --accent:#2f6fed; --head:#eef2fb; --free-ink:#1c7a3c; --full-ink:#b3261e; --mine:#2f6fed;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{ --bg:#12151c; --card:#1b2029; --ink:#e8ecf4; --muted:#9aa4b8; --line:#2a3140;
+      --head:#232a38; --free-ink:#6fd394; --full-ink:#f08a84; }
+  }
+  *{box-sizing:border-box}
+  body{margin:0;padding-bottom:70px;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--ink)}
+  header{padding:18px 16px 8px;max-width:760px;margin:0 auto}
+  .top-bar{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px}
+  h1{margin:0;font-size:1.35rem}
+  .sub{color:var(--muted);font-size:.9rem;margin-top:4px}
+  .banner{background:#fff4d6;color:#6b4e00;border-radius:10px;padding:10px 12px;margin:10px 0 0;font-size:.85rem}
+  main{max-width:760px;margin:0 auto;padding:0 12px 40px}
+  .days{display:flex;gap:6px;overflow-x:auto;padding:10px 0;scrollbar-width:none}
+  .days button{flex:0 0 auto;border:1px solid var(--line);background:var(--card);color:var(--ink);
+    border-radius:12px;padding:8px 12px;font-size:.85rem;cursor:pointer;text-align:center;min-width:58px;font-family:inherit}
+  .days button small{display:block;color:var(--muted);font-size:.72rem;text-transform:capitalize}
+  .days button.active{background:var(--accent);border-color:var(--accent);color:#fff}
+  .days button.active small{color:#dbe6ff}
+
+  .sheet{background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+  table{width:100%;border-collapse:collapse;table-layout:fixed}
+  col.c-name{width:27%} col.c-room{width:15%} col.c-hour{width:19%} col.c-w{width:15%} col.c-d{width:15%} col.c-x{width:9%}
+  th{background:var(--head);font-size:.72rem;font-weight:700;padding:9px 4px;text-align:center;line-height:1.2}
+  th:first-child{text-align:left;padding-left:10px}
+  th .ic{display:block;font-size:1rem}
+  td{padding:9px 4px;border-top:1px solid var(--line);font-size:.86rem;text-align:center;word-break:break-word}
+  td:first-child{text-align:left;padding-left:10px;font-weight:600}
+  tr.mine td:first-child{box-shadow:inset 3px 0 0 var(--mine)}
+  td.none{color:var(--muted)}
+  td.empty{color:var(--muted);text-align:center;padding:18px 10px;font-weight:400}
+  td button.x{border:0;background:none;color:var(--full-ink);font-size:1rem;cursor:pointer;padding:2px 6px}
+
+  tfoot td{background:var(--head);padding:8px 3px;vertical-align:top}
+  tfoot td:first-child{padding-left:6px}
+  tfoot input, tfoot select{width:100%;padding:9px 4px;border:1px solid var(--line);border-radius:8px;
+    font-size:.9rem;background:var(--card);color:var(--ink);font-family:inherit;text-align:center;min-width:0}
+  tfoot input#fName{text-align:left;padding-left:8px}
+  .add{padding:10px 12px 12px;background:var(--head)}
+  .add .info{font-size:.8rem;color:var(--muted);margin-bottom:8px}
+  .add .info b.ok{color:var(--free-ink)} .add .info b.no{color:var(--full-ink)}
+  .add button{width:100%;padding:12px;border:0;border-radius:10px;background:var(--accent);color:#fff;
+    font-size:1rem;font-weight:600;cursor:pointer;font-family:inherit}
+  .err{color:var(--full-ink);font-size:.82rem;min-height:1.1em;margin:0 0 6px}
+  .rules{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;font-size:.85rem;color:var(--muted);margin-top:14px}
+  .rules b{color:var(--ink)}
+
+  /* Module Google Traduction */
+  #google_translate_element select { padding: 4px; border-radius: 6px; font-size: 0.85rem; border: 1px solid var(--line); background: var(--card); color: var(--ink); }
+
+  /* Bannière Publicitaire Fixe en bas */
+  .ad-banner-bottom {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 60px;
+    background: var(--card);
+    border-top: 1px solid var(--line);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+    box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
+  }
+  .ad-placeholder {
+    font-size: 0.75rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+</style>
+
+<!-- Google Translate Widget -->
+<script type="text/javascript">
+function googleTranslateElementInit() {
+  new google.translate.TranslateElement({
+    pageLanguage: 'fr',
+    layout: google.translate.TranslateElement.InlineLayout.SIMPLE
+  }, 'google_translate_element');
+}
+</script>
+<script type="text/javascript" src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+
+</head>
+<body>
+<header>
+  <div class="top-bar">
+    <h1>🧺 Laverie du dortoir</h1>
+    <div id="google_translate_element"></div>
+  </div>
+  <div class="sub">Inscris ton nom en bas du tableau. La liste se met à jour en direct pour tous.</div>
+  <div class="banner" id="demoBanner" hidden>
+    Mode démo : les réservations restent seulement sur cet appareil.
+  </div>
+</header>
+
+<main>
+  <div class="days" id="days"></div>
+
+  <div class="sheet">
+    <table>
+      <colgroup>
+        <col class="c-name"><col class="c-room"><col class="c-hour"><col class="c-w"><col class="c-d"><col class="c-x">
+      </colgroup>
+      <thead>
+        <tr>
+          <th>Nom</th>
+          <th>Chambre</th>
+          <th>Heure</th>
+          <th><span class="ic">🧺</span>Lave-linge</th>
+          <th><span class="ic">♨️</span>Sèche-linge</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="rows"></tbody>
+      <tfoot>
+        <tr>
+          <td><input id="fName" placeholder="Nom" autocomplete="off" maxlength="30" aria-label="Nom"></td>
+          <td><input id="fRoom" placeholder="Ch." autocomplete="off" maxlength="6" aria-label="Chambre"></td>
+          <td><select id="fH" aria-label="Heure"></select></td>
+          <td><select id="fW" aria-label="Lave-linge"></select></td>
+          <td><select id="fD" aria-label="Sèche-linge"></select></td>
+          <td></td>
+        </tr>
+      </tfoot>
+    </table>
+    <div class="add">
+      <div class="info" id="info"></div>
+      <div class="err" id="err"></div>
+      <button type="button" id="addBtn">Ajouter au planning</button>
+    </div>
+  </div>
+
+  <div class="rules">
+    <b>Règles :</b> 2 machines max par personne par jour. Pour annuler, appuyez sur ✕.
+  </div>
+</main>
+
+<!-- BANNIÈRE PUBLICITAIRE EN BAS DE L'ÉCRAN -->
+<div class="ad-banner-bottom">
+  <!-- Place ton code AdSense / AdMob Web ici -->
+  <div class="ad-placeholder">📢 Espace Publicité (320x50 / Leaderboard)</div>
+</div>
+
+<script type="module">
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyBg4CHaUHq6K329-CICN2E7RQdlXBHj0fE",
+  authDomain: "planning-24bb4.firebaseapp.com",
+  projectId: "planning-24bb4",
+  storageBucket: "planning-24bb4.firebasestorage.app",
+  messagingSenderId: "494601300200",
+  appId: "1:494601300200:web:ce214dbc80d88132e3415d",
+  measurementId: "G-D3WE38ML3N"
+};
+
+const WASHERS = 2, DRYERS = 2;
+const FIRST_HOUR = 7, LAST_HOUR = 21;
+const MAX_SLOTS_PER_PERSON_PER_DAY = 2;
+const DAYS_AHEAD = 7;
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+const pad = n => String(n).padStart(2, "0");
+
+function deviceId(){
+  try{
+    let id = localStorage.getItem("doc_device");
+    if(!id){ id = crypto.randomUUID(); localStorage.setItem("doc_device", id); }
+    return id;
+  }catch{ return "anon"; }
+}
+const ME = deviceId();
+
+const usedW = entries => entries.reduce((s, e) => s + e.washers, 0);
+const usedD = entries => entries.reduce((s, e) => s + e.dryers, 0);
+function assertCapacity(entries, entry){
+  if (usedW(entries) + entry.washers > WASHERS || usedD(entries) + entry.dryers > DRYERS) throw new Error("full");
+}
+
+const keyOf = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+
+let store;
+if (FIREBASE_CONFIG && FIREBASE_CONFIG.apiKey) {
+  const { initializeApp } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js");
+  const fs = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
+  const app = initializeApp(FIREBASE_CONFIG);
+  const db = fs.getFirestore(app);
+  const ref = (date, h) => fs.doc(db, "slots", `${date}_${h}`);
+
+  // NETTOYAGE AUTOMATIQUE DES ANCIENS JOURS
+  async function cleanupOldDays() {
+    try {
+      const todayKey = keyOf(new Date());
+      const snapshot = await fs.getDocs(fs.collection(db, "slots"));
+      snapshot.forEach(async (document) => {
+        const data = document.data();
+        if (data.date && data.date < todayKey) {
+          await fs.deleteDoc(fs.doc(db, "slots", document.id));
+        }
+      });
+    } catch(e) {}
+  }
+  cleanupOldDays();
+
+  store = {
+    subscribe(date, cb){
+      const q = fs.query(fs.collection(db, "slots"), fs.where("date", "==", date));
+      return fs.onSnapshot(q, snap => {
+        const map = {}; snap.docs.forEach(d => { const v = d.data(); map[v.hour] = v.entries || []; });
+        cb(map);
+      });
+    },
+    async book(date, h, entry){
+      await fs.runTransaction(db, async tx => {
+        const snap = await tx.get(ref(date, h));
+        const entries = snap.exists() ? (snap.data().entries || []) : [];
+        assertCapacity(entries, entry);
+        tx.set(ref(date, h), { date, hour: h, entries: [...entries, entry] });
+      });
+    },
+    async cancel(date, h, entryId){
+      await fs.runTransaction(db, async tx => {
+        const snap = await tx.get(ref(date, h));
+        if (!snap.exists()) return;
+        tx.set(ref(date, h), { date, hour: h, entries: (snap.data().entries || []).filter(e => e.id !== entryId) });
+      });
+    }
+  };
+} else {
+  $("demoBanner").hidden = false;
+  const KEY = "doc_demo_v1";
+  const read = () => { try{ return JSON.parse(localStorage.getItem(KEY) || "{}"); }catch{ return {}; } };
+  const write = o => { try{ localStorage.setItem(KEY, JSON.stringify(o)); }catch{} };
+  const listeners = new Set();
+  const notify = () => listeners.forEach(f => f());
+  window.addEventListener("storage", notify);
+  store = {
+    subscribe(date, cb){
+      const f = () => {
+        const map = {};
+        Object.values(read()).filter(v => v.date === date).forEach(v => { map[v.hour] = v.entries; });
+        cb(map);
+      };
+      listeners.add(f); f();
+      return () => listeners.delete(f);
+    },
+    async book(date, h, entry){
+      const all = read(), k = `${date}_${h}`;
+      const entries = all[k]?.entries || [];
+      assertCapacity(entries, entry);
+      all[k] = { date, hour: h, entries: [...entries, entry] };
+      write(all); notify();
+    },
+    async cancel(date, h, entryId){
+      const all = read(), k = `${date}_${h}`;
+      if (all[k]) all[k].entries = all[k].entries.filter(e => e.id !== entryId);
+      write(all); notify();
+    }
+  };
+}
+
+const days = Array.from({ length: DAYS_AHEAD }, (_, i) => { const d = new Date(); d.setDate(d.getDate()+i); return d; });
+let selected = keyOf(days[0]);
+let slots = {};
+let unsub = null;
+
+function isPast(hour){
+  const now = new Date();
+  return selected === keyOf(now) && hour < now.getHours();
+}
+const cleanRoom = v => v.trim().toUpperCase().replace(/\s+/g, "");
+const validRoom = v => /^[A-Z0-9-]{1,6}$/.test(v);
+const norm = s => s.trim().toLowerCase();
+const free = h => { const e = slots[h] || []; return { w: WASHERS - usedW(e), d: DRYERS - usedD(e) }; };
+
+function renderDays(){
+  $("days").innerHTML = "";
+  days.forEach((d, i) => {
+    const b = document.createElement("button");
+    const wd = i === 0 ? "auj." : d.toLocaleDateString("fr-FR", { weekday: "short" });
+    b.innerHTML = `<small>${wd}</small>${d.getDate()}/${pad(d.getMonth()+1)}`;
+    if (keyOf(d) === selected) b.classList.add("active");
+    b.onclick = () => { selected = keyOf(d); slots = {}; renderDays(); listen(); };
+    $("days").appendChild(b);
+  });
+}
+
+function renderRows(){
+  const list = [];
+  for (const [h, entries] of Object.entries(slots)) entries.forEach(e => list.push({ ...e, hour: +h }));
+  list.sort((a, b) => a.hour - b.hour || a.createdAt - b.createdAt);
+
+  $("rows").innerHTML = list.length
+    ? list.map(e => `<tr class="${e.owner === ME ? "mine" : ""}">
+        <td>${esc(e.name)}</td>
+        <td>${esc(e.room)}</td>
+        <td>${e.hour}h–${e.hour+1}h</td>
+        <td class="${e.washers ? "" : "none"}">${e.washers || "–"}</td>
+        <td class="${e.dryers ? "" : "none"}">${e.dryers || "–"}</td>
+        <td><button class="x" type="button" data-h="${e.hour}" data-id="${esc(e.id)}" aria-label="Retirer">✕</button></td>
+      </tr>`).join("")
+    : `<tr><td class="empty" colspan="6">Personne n'est encore inscrit ce jour-là.</td></tr>`;
+}
+
+$("rows").addEventListener("click", async ev => {
+  const btn = ev.target.closest("button.x"); if (!btn) return;
+  const h = +btn.dataset.h;
+  const entry = (slots[h] || []).find(e => e.id === btn.dataset.id);
+  if (!entry) return;
+  if (entry.owner !== ME){
+    const typed = prompt(`Pour retirer ${entry.name} de la liste, entre le numéro de chambre :`);
+    if (typed === null) return;
+    if (cleanRoom(typed) !== String(entry.room)) return alert("Ce n'est pas le bon numéro de chambre.");
+  } else if (!confirm("Retirer ta réservation ?")) return;
+  await store.cancel(selected, h, entry.id);
+});
+
+function setIfChanged(el, html){ if (el.dataset.sig !== html){ el.innerHTML = html; el.dataset.sig = html; } }
+
+function refreshForm(){
+  const hSel = $("fH"), prevH = hSel.value;
+  let opts = "";
+  for (let h = FIRST_HOUR; h <= LAST_HOUR; h++){
+    const f = free(h), past = isPast(h), full = f.w + f.d === 0;
+    opts += `<option value="${h}"${past || full ? " disabled" : ""}>${h}h–${h+1}h${past ? " (passé)" : full ? " (complet)" : ""}</option>`;
+  }
+  setIfChanged(hSel, opts);
+  const stillOk = prevH && hSel.querySelector(`option[value="${prevH}"]:not([disabled])`);
+  if (stillOk) hSel.value = prevH;
+  else { const first = hSel.querySelector("option:not([disabled])"); hSel.value = first ? first.value : ""; }
+  refreshCounts();
+}
+
+function refreshCounts(){
+  const h = +$("fH").value;
+  const f = h ? free(h) : { w: 0, d: 0 };
+  const build = n => Array.from({ length: n + 1 }, (_, i) => `<option value="${i}">${i === 0 ? "Non" : i}</option>`).join("");
+  const wSel = $("fW"), dSel = $("fD"), pw = +wSel.value || 0, pd = +dSel.value || 0;
+  setIfChanged(wSel, build(f.w)); setIfChanged(dSel, build(f.d));
+  wSel.value = String(Math.min(pw, f.w)); dSel.value = String(Math.min(pd, f.d));
+  $("info").innerHTML = h
+    ? `Pour <b>${h}h–${h+1}h</b> : <b class="${f.w ? "ok" : "no"}">🧺 ${f.w} lave-linge</b> · <b class="${f.d ? "ok" : "no"}">♨️ ${f.d} sèche-linge</b>`
+    : "Plus aucun créneau disponible aujourd'hui.";
+}
+$("fH").addEventListener("change", refreshCounts);
+
+$("addBtn").addEventListener("click", async () => {
+  const err = m => { $("err").textContent = m; };
+  err("");
+  const name = $("fName").value.trim().slice(0, 30), room = cleanRoom($("fRoom").value);
+  const h = +$("fH").value, w = +$("fW").value, d = +$("fD").value;
+  if (!name) return err("Écris ton nom.");
+  if (!validRoom(room)) return err("Entre un numéro de chambre valide.");
+  if (!h) return err("Choisis une heure.");
+  if (w + d === 0) return err("Choisis au moins une option.");
+  let already = 0;
+  for (const list of Object.values(slots)) already += list.filter(e => String(e.room) === room && norm(e.name) === norm(name)).length;
+  if (already >= MAX_SLOTS_PER_PERSON_PER_DAY) return err(`${name} a déjà réservé ${MAX_SLOTS_PER_PERSON_PER_DAY} créneaux ce jour-là.`);
+  try{
+    await store.book(selected, h, { id: crypto.randomUUID(), room, name, washers: w, dryers: d, owner: ME, createdAt: Date.now() });
+    try{ localStorage.setItem("doc_room", room); localStorage.setItem("doc_name", name); }catch{}
+  }catch(ex){
+    err(ex.message === "full" ? "Créneau complet." : "Erreur, réessaie.");
+  }
+});
+
+function onData(map){ slots = map; renderRows(); refreshForm(); }
+function listen(){
+  if (unsub) unsub();
+  renderRows(); refreshForm();
+  unsub = store.subscribe(selected, onData);
+}
+try{
+  $("fName").value = localStorage.getItem("doc_name") || "";
+  $("fRoom").value = localStorage.getItem("doc_room") || "";
+}catch{}
+renderDays();
+listen();
+setInterval(() => { renderRows(); refreshForm(); }, 60000);
+</script>
+</body>
+</html>
